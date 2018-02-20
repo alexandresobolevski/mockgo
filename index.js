@@ -11,7 +11,7 @@ var connectionCache = {}
 var maxRetries = 5
 var serverConfig = null
 var serverEmitter = null
-var mongoClient = null;
+var mongoClients = [];
 
 const startServer = (callback, retries) => {
     retries = retries || 0
@@ -60,7 +60,7 @@ const createServerSpecificConfiguration = (serverConfig, dbName, callback) => {
     var configCopy = Object.assign({}, serverConfig)
     configCopy.database = dbName
     createConnection(configCopy, (error, client) => {
-        mongoClient = client;
+        mongoClients.push(client);
         var db = client.db(dbName)
         if (error) {
             return callback(error)
@@ -109,13 +109,16 @@ const shutDown = callback => {
     serverEmitter = null
     serverConfig = null
     connectionCache = {}
-    if (mongoClient && mongoClient.close) {
-        mongoClient.close((err) => {
-            callback(err)
-        })
-    } else {
-        callback(null);
+    var closePromises = [];
+    var clients = mongoClients.splice(0);
+    for (var i=0; i<clients.length; i++) {
+        if (clients[i] && clients[i].close) {
+            closePromises.push(clients[i].close());
+        }
     }
+    Promise.all(closePromises)
+        .then(() => callback(null))
+        .catch(err => callback(err))
 }
 
 module.exports = {
