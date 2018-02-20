@@ -11,6 +11,7 @@ var connectionCache = {}
 var maxRetries = 5
 var serverConfig = null
 var serverEmitter = null
+var mongoClient = null;
 
 const startServer = (callback, retries) => {
     retries = retries || 0
@@ -51,21 +52,21 @@ const createConnection = (config, callback) => {
 
     //we add the possibilty to override the version of the mongodb driver
     //by exposing it via module.exports
-    module.exports.mongodb.connect(uri, callback)
+    module.exports.mongodb.MongoClient.connect(uri, callback)
 }
 
 const createServerSpecificConfiguration = (serverConfig, dbName, callback) => {
     debug('creating connection for db "%s"', dbName)
-
     var configCopy = Object.assign({}, serverConfig)
     configCopy.database = dbName
-    createConnection(configCopy, (error, connection) => {
+    createConnection(configCopy, (error, client) => {
+        mongoClient = client;
+        var db = client.db(dbName)
         if (error) {
             return callback(error)
         }
-
-        connectionCache[dbName] = connection
-        callback(null, connection)
+        connectionCache[dbName] = db
+        callback(null, db)
     })
 }
 
@@ -107,16 +108,13 @@ const shutDown = callback => {
 
     serverEmitter = null
     serverConfig = null
-
-    var connections = Object.keys(connectionCache).map(key => connectionCache[key])
-    if (connections.length > 0) {
-        debug('closing %d mongo connections', connections.length)
-        async.each(connections, (con, cb) => con.close(cb), error => {
-            connectionCache = {}
-            callback(error)
+    connectionCache = {}
+    if (mongoClient && mongoClient.close) {
+        mongoClient.close((err) => {
+            callback(err)
         })
     } else {
-        process.nextTick(() => callback(null))
+        callback(null);
     }
 }
 

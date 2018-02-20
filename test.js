@@ -4,12 +4,12 @@ var expect = require('chai').expect
 var mockgo = require('./')
 
 var mongodbmock = {
-    _uri: '',
-    connect: (uri, callback) => {
-        callback(null, {
-            _uri: uri,
-            close: callback => process.nextTick(callback)
-        })
+    MongoClient: {
+        connect: (uri, callback) => {
+            callback(null, {
+                db: () => ({ _uri: uri })
+            })
+        }
     }
 }
 
@@ -68,7 +68,7 @@ describe('mockgo', function() {
         after(done => mockgo.shutDown(done))
 
         it('should not load anything', () => expect(firstResult).to.be.deep.equal([]))
-        it('should not load anything', () => expect(secondResult.test).to.be.deep.equal('data'))
+        it('should find new data', () => expect(secondResult.test).to.be.deep.equal('data'))
     })
 
     describe('seperate databases', () => {
@@ -140,7 +140,10 @@ describe('mockgo', function() {
         })
         after(done => {
             mockgo.mongodb = prevMongodb
-            mockgo.shutDown(done)
+            mockgo.shutDown(() => {
+                console.log('done');
+                done();
+            })
         })
 
         it('should have used the mock', () => expect(connection._uri).to.match(/mongodb:\/\/127.0.0.1:\d+\/myLovelyNamedConnection/))
