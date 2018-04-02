@@ -66,6 +66,7 @@ const createServerSpecificConfiguration = (serverConfig, dbName, callback) => {
             return callback(error)
         }
         connectionCache[dbName] = db
+        db.serverConfig = serverConfig
         callback(null, db)
     })
 }
