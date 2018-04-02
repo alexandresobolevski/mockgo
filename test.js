@@ -26,7 +26,10 @@ describe('mockgo', function() {
                 done()
             })
         })
-        after(done => mockgo.shutDown(done))
+        after(done => mockgo.shutDown((err) => {
+            console.log(err);
+            done();
+        }))
 
         it('should open a connection with a dummy database name', () => expect(connection.s.databaseName).to.equal('testDatabase'))
     })
@@ -140,10 +143,7 @@ describe('mockgo', function() {
         })
         after(done => {
             mockgo.mongodb = prevMongodb
-            mockgo.shutDown(() => {
-                console.log('done');
-                done();
-            })
+            mockgo.shutDown(() => done())
         })
 
         it('should have used the mock', () => expect(connection._uri).to.match(/mongodb:\/\/127.0.0.1:\d+\/myLovelyNamedConnection/))

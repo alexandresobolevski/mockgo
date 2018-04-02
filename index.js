@@ -122,6 +122,7 @@ const shutDown = callback => {
 }
 
 module.exports = {
+    startServer,
     getConnection,
     shutDown,
     mongodb: mongodb
